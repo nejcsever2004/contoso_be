@@ -1,0 +1,41 @@
+﻿@page
+@model Contoso.Users.GradesAndScheduleModel
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grades and Schedule</title>
+</head>
+<body>
+    <div>
+        <h1>Welcome, @Model.CurrentUser.FullName</h1>
+        <h3>Your Grades and Schedule</h3>
+
+        <h4>Enrolled Courses:</h4>
+        <ul>
+            @foreach (var course in Model.EnrolledCourses)
+            {
+                <li>@course.Title</li>
+            }
+        </ul>
+
+        <h4>Grades:</h4>
+        <ul>
+            @foreach (var grade in Model.Grades)
+            {
+                <li>Course: @Model.EnrolledCourses.FirstOrDefault(c => c.CourseID == grade.Key)?.Title - Grade: @grade.Value</li>
+            }
+        </ul>
+
+        <h4>Schedule:</h4>
+        <ul>
+            @foreach (var schedule in Model.Schedule)
+            {
+                <li>@schedule.Course?.Title - Start: @schedule.StartTime - End: @schedule.EndTime</li>
+            }
+        </ul>
+    </div>
+</body>
+</html>

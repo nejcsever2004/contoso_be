@@ -6,6 +6,9 @@ using Contoso.Data;
 using Contoso.Models;
 using Contoso.Helpers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
 
 namespace Contoso.Pages
 {
@@ -30,54 +33,41 @@ namespace Contoso.Pages
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // Validate email and password
             if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
             {
                 ModelState.AddModelError(string.Empty, "Email and Password are required.");
                 return Page();
             }
 
-            // Retrieve the user by email from the database
             var user = _context.Users.FirstOrDefault(u => u.Email == Email);
 
-            if (user == null)
+            if (user == null || !_passwordHasherService.VerifyPassword(user.Password, Password))
             {
                 ModelState.AddModelError(string.Empty, "Invalid login attempt.");
                 return Page();
             }
 
-            // Verify the provided password with the stored hashed password
-            var isPasswordValid = _passwordHasherService.VerifyPassword(user.Password, Password);
+            // Create claims for the authenticated user
+            var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.Name, user.Email),
+        new Claim("UserId", user.UserID.ToString()),  // Add UserID as a custom claim
+        new Claim(ClaimTypes.Role, user.Role)
+    };
 
-            if (!isPasswordValid)
-            {
-                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                return Page();
-            }
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-            // Store the user ID and role in the session
-            HttpContext.Session.SetInt32("UserId", user.UserID);  // Store the UserID in session
-            HttpContext.Session.SetString("UserRole", user.Role);  // Store the User's role
+            // Sign in the user
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
 
-            // Debugging: log session values for troubleshooting
+            // Set UserId in session
+            HttpContext.Session.SetInt32("UserId", user.UserID); // Store UserID in session
+
             Console.WriteLine($"User logged in: {user.UserID}, Role: {user.Role}");
 
-            // Redirect based on the user's role
-            if (user.Role == "Student")
-            {
-                // Redirect to Grades and Schedule page for Students
-                return RedirectToPage("/Users/GradesAndSchedule");
-            }
-            else if (user.Role == "Teacher")
-            {
-                // Redirect to Users page for Teachers
-                return RedirectToPage("/Users/Index");
-            }
-            else
-            {
-                // Redirect to Home page if role is neither Student nor Teacher
-                return RedirectToPage("/Index");
-            }
+            return RedirectToPage(user.Role == "Student" ? "/Users/GradesAndSchedule" : "/Users/Index");
         }
+
     }
 }

@@ -15,6 +15,8 @@ namespace Contoso.Models
         public int? DepartmentID { get; set; }
 
         public User? Teacher { get; set; }
+
+        //public User? Student { get; set; }
         public Department? Department { get; set; }
     }
 }

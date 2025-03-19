@@ -22,19 +22,16 @@
                     <ul class="navbar-nav me-auto">
                         @if (User.Identity.IsAuthenticated)  // Check if the user is authenticated
                         {
-                            @if (User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Instructor"))
+                            @if (User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Teacher"))
                             {
                                 <li class="nav-item dropdown">
                                     <a class="nav-link dropdown-toggle" href="#" id="instructorDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Instructor
+                                        Teacher
                                     </a>
                                     <ul class="dropdown-menu" aria-labelledby="instructorDropdown">
                                         <li><a class="dropdown-item" asp-page="/Courses/Index">Courses</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Courses/Teacher/Posts/Index">Teacher Posts</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Students/Index">Students</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Enrollments/Index">Enrollments</a></li>
-                                        <li><a class="dropdown-item" asp-page="/OfficeAsignment/Index">Office Assignment</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Instructors/Index">Instructors</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Users/Index">Users</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Grades/Index">Grades</a></li>
                                         <li><a class="dropdown-item" asp-page="/Departments/Index">Departments</a></li>
                                     </ul>
                                 </li>
@@ -46,9 +43,8 @@
                                         Student
                                     </a>
                                     <ul class="dropdown-menu" aria-labelledby="studentDropdown">
-                                        <li><a class="dropdown-item" asp-page="/Students/GradesAndPeriods">Grades & Periods</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Acount/Index">Account Info</a></li>
-                                        <li><a class="dropdown-item" asp-page="/Courses/Teacher/Posts/Index">Teacher Posts</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Users/GradesAndSchedule">Grades & Periods</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Courses/Index">Courses</a></li>
                                     </ul>
                                 </li>
                             }

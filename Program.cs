@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Contoso.Data;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNet.Identity;
 using Contoso.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Razor Pages
+builder.Services.AddDistributedMemoryCache(); // Required for session
+
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<PasswordHasherService>();  // Register PasswordHasherService
 
@@ -30,10 +30,10 @@ builder.Services.AddSession(options =>
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
         options.LoginPath = "/Login"; // Ensure this path exists
         options.AccessDeniedPath = "/AccessDenied"; // Ensure this path exists
         options.LogoutPath = "/Logout"; // Ensure this path exists
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     });
 
 // Authorization builder
@@ -70,7 +70,7 @@ else
 app.UseSession();
 
 // Use authentication middleware
-app.UseAuthentication(); // Uncommented this line for authentication to work properly
+app.UseAuthentication(); // Authentication middleware to handle cookies
 
 // Use routing, static files, and authorization middleware
 app.UseHttpsRedirection();

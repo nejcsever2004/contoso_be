@@ -16,7 +16,12 @@ namespace Contoso.Models
         [StringLength(255)]
         public string? Email { get; set; }  // Nullable string property for Email
 
+        [Required]
+        [StringLength(255)]
+        public string? Password { get; set; }
+
         [Display(Name = "Role")]
+        [StringLength(255)]
         [Required]
         public string? Role { get; set; }  // Nullable string property for Role (Teacher, Student)
 

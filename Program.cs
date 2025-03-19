@@ -3,11 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Contoso.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNet.Identity;
+using Contoso.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add Razor Pages
 builder.Services.AddRazorPages();
+builder.Services.AddScoped<PasswordHasherService>();  // Register PasswordHasherService
 
 // Add DbContext and configure SQL Lite connection
 builder.Services.AddDbContext<SchoolContext>(options =>
@@ -35,7 +39,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 // Authorization builder
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("Instructor", policy => policy.RequireRole("Instructor"));
+    options.AddPolicy("Teacher", policy => policy.RequireRole("Teacher"));
     options.AddPolicy("Student", policy => policy.RequireRole("Student"));
 });
 

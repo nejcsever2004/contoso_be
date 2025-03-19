@@ -1,0 +1,62 @@
+﻿@page
+@model Contoso.Pages.GradesAndSchedule.IndexModel
+@{
+    ViewData["Title"] = "Grades and Schedule";
+}
+    <div class="container mt-4">
+        <h2>@Model.Data.Username's Grades and Schedule</h2>
+
+        <!-- Grades Table -->
+        <h3>Grades</h3>
+        @if (Model.Data.Grades != null && Model.Data.Grades.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Course</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var grade in Model.Data.Grades)
+                    {
+                        <tr>
+                            <td>@grade.Course.Title</td>
+                            <td>@grade.GradeValue</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No grades available.</p>
+        }
+
+        <!-- Timetable -->
+        <h3>Schedule</h3>
+        @if (Model.Data.TimeTable != null && Model.Data.TimeTable.Any())
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Time Slot</th>
+                        <th>Subject</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var timeSlot in Model.Data.TimeTable)
+                    {
+                        <tr>
+                            <td>@timeSlot.StartTime.ToString("hh:mm tt") - @timeSlot.EndTime.ToString("hh:mm tt")</td>
+                            <td>Placeholder for subject</td> <!-- Placeholder, replace with actual data -->
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No timetable available.</p>
+        }
+    </div>

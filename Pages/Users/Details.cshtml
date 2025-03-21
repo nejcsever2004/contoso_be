@@ -24,12 +24,6 @@
             @Html.DisplayFor(model => model.User.Email)
         </dd>
         <dt class="col-sm-2">
-            @Html.DisplayNameFor(model => model.User.Password)
-        </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.User.Password)
-        </dd>
-        <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.User.Role)
         </dt>
         <dd class="col-sm-10">
@@ -38,8 +32,18 @@
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.User.ProfileDocument)
         </dt>
-        <dd class="col-sm-10">
-            @Html.DisplayFor(model => model.User.ProfileDocument)
+        <dd class="col-sm-2">
+            @if (!string.IsNullOrEmpty(Model.User.ProfileDocument))
+            {
+                <a href="@Model.User.ProfileDocument" target="_blank">
+                    <img src="@Model.User.ProfileDocument" alt="Profile Icon" width="50" height="50" class="img-thumbnail" />
+                </a>
+            }
+            else
+            {
+                <span>No document uploaded</span>
+            }
+            <br />
         </dd>
         <dt class="col-sm-2">
             @Html.DisplayNameFor(model => model.User.Department)

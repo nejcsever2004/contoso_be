@@ -10,7 +10,20 @@
 </head>
 <body>
     <div>
-        <h1>Welcome, @Model.CurrentUser.FullName</h1>
+        <h1>
+            Welcome, @Model.CurrentUser.FullName
+            @if (!string.IsNullOrEmpty(Model.CurrentUser.ProfileDocument))
+            {
+                <a href="@Model.CurrentUser.ProfileDocument" target="_blank">
+                    <img src="@Model.CurrentUser.ProfileDocument" alt="Profile Icon" width="50" height="50" class="img-thumbnail" style="margin-left: 10px;" />
+                </a>
+            }
+            else
+            {
+                <span>(No profile image)</span>
+            }
+        </h1>
+
         <h3>Your Grades and Schedule</h3>
 
         <h4>Enrolled Courses:</h4>

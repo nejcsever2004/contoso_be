@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Contoso.Models
 {
@@ -18,6 +19,7 @@ namespace Contoso.Models
 
         // Navigation properties
         public User? Student { get; set; }  // Navigation property to Student (User)
+        [JsonIgnore]
         public Course? Course { get; set; }  // Navigation property to Course
     }
 }

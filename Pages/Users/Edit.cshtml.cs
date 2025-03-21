@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -23,6 +25,9 @@ namespace Contoso.Pages.Users
         [BindProperty]
         public User User { get; set; } = default!;
 
+        [BindProperty]
+        public IFormFile FileUpload { get; set; }
+
         public async Task<IActionResult> OnGetAsync(int? id)
         {
             if (id == null)
@@ -30,18 +35,16 @@ namespace Contoso.Pages.Users
                 return NotFound();
             }
 
-            var user =  await _context.Users.FirstOrDefaultAsync(m => m.UserID == id);
+            var user = await _context.Users.FirstOrDefaultAsync(m => m.UserID == id);
             if (user == null)
             {
                 return NotFound();
             }
             User = user;
-           ViewData["DepartmentID"] = new SelectList(_context.Departments, "DepartmentID", "DepartmentName");
+            ViewData["DepartmentID"] = new SelectList(_context.Departments, "DepartmentID", "DepartmentName");
             return Page();
         }
 
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more information, see https://aka.ms/RazorPagesCRUD.
         public async Task<IActionResult> OnPostAsync()
         {
             if (!ModelState.IsValid)
@@ -49,6 +52,27 @@ namespace Contoso.Pages.Users
                 return Page();
             }
 
+            string profileDocumentPath = User.ProfileDocument;
+            if (FileUpload != null && FileUpload.Length > 0)
+            {
+                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                string uniqueFilename = $"{Guid.NewGuid()}_{Path.GetFileName(FileUpload.FileName)}";
+                string filePath = Path.Combine(uploadsFolder, uniqueFilename);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await FileUpload.CopyToAsync(stream);
+                }
+
+                profileDocumentPath = $"/uploads/{uniqueFilename}";
+            }
+
+            User.ProfileDocument = profileDocumentPath;
             _context.Attach(User).State = EntityState.Modified;
 
             try

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Contoso.Models
 {
@@ -14,6 +15,7 @@ namespace Contoso.Models
         public string? DepartmentName { get; set; }
 
         public ICollection<User>? Users { get; set; }
+        [JsonIgnore]
         public ICollection<Course>? Courses { get; set; }
     }
 }

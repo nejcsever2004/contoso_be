@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Contoso.Data;
 using Contoso.Models;
 using Contoso.Helpers;
+using Microsoft.AspNetCore.Http;
 
 namespace Contoso.Pages
 {
@@ -28,6 +29,9 @@ namespace Contoso.Pages
 
         [BindProperty]
         public string ConfirmPassword { get; set; }  // For confirm password input
+
+        [BindProperty]
+        public IFormFile FileUpload { get; set; }
 
         // OnGet method to initialize ViewData
         public void OnGet()
@@ -60,6 +64,26 @@ namespace Contoso.Pages
 
             // Hash the password using PasswordHasherService
             var hashedPassword = _passwordHasherService.HashPassword(Password);
+
+            string profileDocumentPath = null;
+            if(FileUpload != null && FileUpload.Length > 0)
+            {
+                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                string uniqueFilename = $"{Guid.NewGuid()}_{Path.GetFileName(FileUpload.FileName)}";
+                string filePath = Path.Combine(uploadsFolder, uniqueFilename);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await FileUpload.CopyToAsync(stream);
+                }
+
+                profileDocumentPath = $"/uploads/{uniqueFilename}";
+            }
 
             // Add the user to the database with hashed password
             var newUser = new User

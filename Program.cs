@@ -78,7 +78,7 @@ else
 
 // Use session middleware (you need this for session management)
 app.UseSession();
-
+app.UseStaticFiles();
 // Use authentication middleware
 app.UseAuthentication(); // Authentication middleware to handle cookies
 

@@ -13,7 +13,7 @@ namespace Contoso.Models
         [Required]
         [StringLength(255)]
         public string? DepartmentName { get; set; }
-
+        [JsonIgnore]
         public ICollection<User>? Users { get; set; }
         [JsonIgnore]
         public ICollection<Course>? Courses { get; set; }

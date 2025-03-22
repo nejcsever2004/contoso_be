@@ -5,8 +5,6 @@ using Contoso.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -19,86 +17,66 @@ public class GradesController : ControllerBase
         _context = context;
     }
 
+    // GET: api/grades
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Course>>> GetCourses()
+    public async Task<ActionResult<IEnumerable<Grade>>> GetGrades()
     {
-        var courses = await _context.Courses
-            .Include(c => c.Department)
-            .Include(c => c.Teacher)
+        var grades = await _context.Grades
+            .Include(g => g.Student)
+            .Include(g => g.Course)
             .ToListAsync();
+        return Ok(grades);
+    }
 
-        var jsonOptions = new JsonSerializerOptions
-        {
-            ReferenceHandler = ReferenceHandler.Preserve, // Handle circular references
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull // Optionally ignore null properties
-        };
-
-        // Serialize directly and return the JSON response without deserializing
-        var json = JsonSerializer.Serialize(courses, jsonOptions); // Serialize with circular reference handling
-        return Content(json, "application/json"); // Return the serialized JSON as content
-    }   
-
+    // GET: api/grades/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Course>> GetCourse(int id)
+    public async Task<ActionResult<Grade>> GetGrade(int id)
     {
-        var course = await _context.Courses
-            .Include(c => c.Department)
-            .Include(c => c.Teacher)
-            .FirstOrDefaultAsync(c => c.CourseID == id);
+        var grade = await _context.Grades
+            .Include(g => g.Student)
+            .Include(g => g.Course)
+            .FirstOrDefaultAsync(g => g.GradeID == id);
 
-        if (course == null)
+        if (grade == null)
         {
             return NotFound();
         }
 
-        var jsonOptions = new JsonSerializerOptions
-        {
-            ReferenceHandler = ReferenceHandler.Preserve // Handle circular references
-        };
-
-        var json = JsonSerializer.Serialize(course, jsonOptions); // Serialize with circular reference handling
-        return Ok(JsonSerializer.Deserialize<Course>(json)); // Deserialize to preserve the original model
+        return Ok(grade);
     }
 
-
-    // POST: api/Grades
+    // POST: api/grades
     [HttpPost]
     public async Task<ActionResult<Grade>> PostGrade(Grade grade)
     {
         _context.Grades.Add(grade);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetCourse), new { id = grade.GradeID }, grade);
+        return CreatedAtAction(nameof(GetGrade), new { id = grade.GradeID }, grade);
     }
 
-    // PUT: api/Grades/5
+    // PUT: api/grades/5
     [HttpPut("{id}")]
     public async Task<IActionResult> PutGrade(int id, Grade grade)
     {
         if (id != grade.GradeID)
         {
-            return BadRequest();
+            return BadRequest("Grade ID mismatch");
         }
 
-        _context.Entry(grade).State = EntityState.Modified;
+        var existingGrade = await _context.Grades.FindAsync(id);
+        if (existingGrade == null)
+        {
+            return NotFound();
+        }
 
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!_context.Grades.Any(g => g.GradeID == id))
-            {
-                return NotFound();
-            }
-            throw;
-        }
+        _context.Entry(existingGrade).CurrentValues.SetValues(grade);
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }
 
-    // DELETE: api/Grades/5
+    // DELETE: api/grades/5
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteGrade(int id)
     {

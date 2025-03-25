@@ -4,9 +4,23 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Contoso.Data;
 using Microsoft.AspNetCore.Identity;
 using Contoso.Helpers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// load configuration for appsetting json
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+// Ensure JWT settings are loaded
+var jwtSettings = builder.Configuration.GetSection("Authentication:Jwt");
+if (string.IsNullOrEmpty(jwtSettings["SecretKey"]))
+{
+    throw new Exception("JWT Secret Key is missing from configuration.");
+}
+
+// Configure CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -19,7 +33,6 @@ builder.Services.AddControllers();
 
 // Add Razor Pages
 builder.Services.AddDistributedMemoryCache(); // Required for session
-
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<PasswordHasherService>();  // Register PasswordHasherService
 
@@ -36,17 +49,34 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
 });
 
-// Authentication (cookies)
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+// Configure authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/Login";
+    options.LogoutPath = "/Logout";
+    options.AccessDeniedPath = "/AccessDenied";
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
-        options.LoginPath = "/Login"; // Ensure this path exists
-        options.AccessDeniedPath = "/AccessDenied"; // Ensure this path exists
-        options.LogoutPath = "/Logout"; // Ensure this path exists
-    });
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidAudience = jwtSettings["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]))
+    };
+});
 
-// Authorization builder
+
+// Configure authorization policies
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Teacher", policy => policy.RequireRole("Teacher"));
@@ -56,15 +86,15 @@ builder.Services.AddAuthorization(options =>
 // Build the app
 var app = builder.Build();
 
-// Apply migrations and seed the database (you can comment this out if you don't need automatic migrations/seeding)
+// Apply migrations and seed the database
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<SchoolContext>();
-
     context.Database.Migrate(); // Ensure auto-migration works
     DbInitializer.Initialize(context); // Ensure initial data is seeded
 }
+
 // Configure error handling for production environment
 if (!app.Environment.IsDevelopment())
 {
@@ -76,21 +106,26 @@ else
     app.UseDeveloperExceptionPage(); // Enable during development
 }
 
-// Use session middleware (you need this for session management)
+// Use session middleware
 app.UseSession();
-app.UseStaticFiles();
-// Use authentication middleware
-app.UseAuthentication(); // Authentication middleware to handle cookies
 
-// Use routing, static files, and authorization middleware
-app.UseHttpsRedirection();
+// Serve static files
 app.UseStaticFiles();
-app.UseRouting();
+
+// Use authentication and authorization middleware
+app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
 
+// Use routing and HTTPS redirection
+app.UseHttpsRedirection();
+app.UseRouting();
 
-// Map Razor Pages
-app.MapRazorPages();
+// Enable CORS
 app.UseCors("AllowAll");
+
+// Map controllers and Razor Pages
+app.MapControllers();
+app.MapRazorPages();
+
+// Run the app
 app.Run();

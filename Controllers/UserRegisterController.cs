@@ -7,7 +7,8 @@ using Contoso.Helpers;
 using Contoso.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore; // Don't forget to include this for Include() to work.
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization; // Add this for authorization
 
 namespace Contoso.Controllers
 {
@@ -24,12 +25,15 @@ namespace Contoso.Controllers
             _passwordHasherService = passwordHasherService;
         }
 
-        // POST: api/UserRegisterController/register
+        // POST: api/userregister/register
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromForm] UserRegistrationRequest request)
         {
-            // Validation of user input
-            if (request == null || string.IsNullOrEmpty(request.FullName) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+            // Validate user input
+            if (request == null ||
+                string.IsNullOrEmpty(request.FullName) ||
+                string.IsNullOrEmpty(request.Email) ||
+                string.IsNullOrEmpty(request.Password))
             {
                 return BadRequest("User information is missing.");
             }
@@ -40,59 +44,94 @@ namespace Contoso.Controllers
                 return BadRequest("Passwords do not match.");
             }
 
-            // Check if the email already exists in the database
-            if (_context.Users.Any(u => u.Email == request.Email))
+            // Normalize email to avoid duplicate entries with different cases
+            string normalizedEmail = request.Email.ToLower();
+
+            // Check if the email already exists
+            if (_context.Users.Any(u => u.Email.ToLower() == normalizedEmail))
             {
                 return BadRequest("Email already exists.");
             }
 
             // Hash the password
-            var hashedPassword = _passwordHasherService.HashPassword(request.Password);
+            string hashedPassword;
+            try
+            {
+                hashedPassword = _passwordHasherService.HashPassword(request.Password);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error hashing password: " + ex.Message);
+            }
 
             // Handle file upload
             string profileDocumentPath = null;
             if (request.FileUpload != null && request.FileUpload.Length > 0)
             {
-                string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
-                if (!Directory.Exists(uploadsFolder))
+                try
                 {
-                    Directory.CreateDirectory(uploadsFolder);
+                    string uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/uploads");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    string uniqueFilename = $"{Guid.NewGuid()}_{DateTime.UtcNow.Ticks}_{Path.GetFileName(request.FileUpload.FileName)}";
+                    string filePath = Path.Combine(uploadsFolder, uniqueFilename);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await request.FileUpload.CopyToAsync(stream);
+                    }
+
+                    profileDocumentPath = $"/uploads/{uniqueFilename}";
                 }
-
-                string uniqueFilename = $"{Guid.NewGuid()}_{Path.GetFileName(request.FileUpload.FileName)}";
-                string filePath = Path.Combine(uploadsFolder, uniqueFilename);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                catch (Exception ex)
                 {
-                    await request.FileUpload.CopyToAsync(stream);
+                    return StatusCode(500, "Error uploading file: " + ex.Message);
                 }
-
-                profileDocumentPath = $"/uploads/{uniqueFilename}";
             }
 
-            // Create a new user object
-            var newUser = new User
+            // Wrap in a transaction to ensure atomicity
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                FullName = request.FullName,
-                Email = request.Email,
-                Password = hashedPassword,  // Store the hashed password
-                Role = request.Role ?? "Student",  // Default to "Student" if no role is specified
-                DepartmentID = request.DepartmentID,
-                ProfileDocument = profileDocumentPath
-            };
+                try
+                {
+                    // Create a new user object
+                    var newUser = new User
+                    {
+                        FullName = request.FullName,
+                        Email = normalizedEmail,
+                        Password = hashedPassword,  // Store the hashed password
+                        Role = request.Role ?? "Student",  // Default role
+                        DepartmentID = request.DepartmentID,
+                        ProfileDocument = profileDocumentPath
+                    };
 
-            // Add the user to the database
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
+                    // Add the user to the database
+                    _context.Users.Add(newUser);
+                    await _context.SaveChangesAsync();
 
-            return Ok(new { message = "User registered successfully." });
+                    // Commit the transaction
+                    await transaction.CommitAsync();
+
+                    return Ok(new { message = "User registered successfully." });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, "Error creating user: " + ex.Message);
+                }
+            }
         }
 
-        // GET: api/UserRegisterController/get/{id}
+        // GET: https://localhost:7062/api/userregister/get/1 or 2 or 3
         [HttpGet("get/{id}")]
         public IActionResult GetUser(int id)
         {
-            var user = _context.Users.FirstOrDefault(u => u.UserID == id);
+            var user = _context.Users
+                .Include(u => u.Department)  // Include Department details
+                .FirstOrDefault(u => u.UserID == id);
 
             if (user == null)
             {
@@ -102,13 +141,12 @@ namespace Contoso.Controllers
             return Ok(user);
         }
 
-        // GET: api/UserRegisterController/getAll
+        // GET: https://localhost:7062/api/userregister/getall
         [HttpGet("getAll")]
         public IActionResult GetAllUsers()
         {
-            // Include Department details
             var users = _context.Users
-                .Include(u => u.Department)  // Ensure this is included to load department info
+                .Include(u => u.Department)  // Include Department details
                 .ToList();
 
             if (!users.Any())
@@ -116,18 +154,16 @@ namespace Contoso.Controllers
                 return NotFound("No users found.");
             }
 
-            // Return a structured JSON response with relevant user information
             var result = users.Select(user => new
             {
                 user.UserID,
                 user.FullName,
                 user.Email,
                 user.Role,
-                DepartmentName = user.Department != null ? user.Department.DepartmentName : "No Department",  // Check if Department is null
+                DepartmentName = user.Department?.DepartmentName ?? "No Department",  // Handle null Department
                 user.ProfileDocument
             }).ToList();
 
-            // Return the result as JSON
             return Ok(result);
         }
     }
@@ -142,8 +178,5 @@ namespace Contoso.Controllers
         public string? Role { get; set; } = "Student";  // Default role is "Student"
         public int DepartmentID { get; set; }
         public IFormFile? FileUpload { get; set; }
-
-        public Department? Department { get; set; }  // Navigation to Department
-
     }
 }

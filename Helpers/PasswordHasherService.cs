@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using Microsoft.AspNet.Identity;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Contoso.Helpers
@@ -16,8 +17,10 @@ namespace Contoso.Helpers
 
         public bool VerifyPassword(string hashedPassword, string inputPassword)
         {
-            var inputHash = HashPassword(inputPassword);
+             var inputHash = HashPassword(inputPassword);
             return inputHash == hashedPassword;
+
+            
         }
     }
 }

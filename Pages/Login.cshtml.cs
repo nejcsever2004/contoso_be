@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Contoso.Pages
 {
@@ -16,11 +20,13 @@ namespace Contoso.Pages
     {
         private readonly SchoolContext _context;  // Database connection
         private readonly PasswordHasherService _passwordHasherService;
+        private readonly IConfiguration _configuration;  // To access appsettings.json
 
-        public LoginModel(SchoolContext context, PasswordHasherService passwordHasherService)
+        public LoginModel(SchoolContext context, PasswordHasherService passwordHasherService, IConfiguration configuration)
         {
             _context = context;
-            _passwordHasherService = passwordHasherService;  // Initialize the password hasher
+            _passwordHasherService = passwordHasherService;
+            _configuration = configuration;
         }
 
         [BindProperty]
@@ -31,7 +37,7 @@ namespace Contoso.Pages
 
         public string ErrorMessage { get; set; }  // For showing error messages
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(bool isJwtRequested = false)
         {
             if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
             {
@@ -49,25 +55,48 @@ namespace Contoso.Pages
 
             // Create claims for the authenticated user
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, user.Email),
-        new Claim("UserId", user.UserID.ToString()),  // Add UserID as a custom claim
-        new Claim(ClaimTypes.Role, user.Role)
-    };
+            {
+                new Claim(ClaimTypes.Name, user.Email),
+                new Claim("UserId", user.UserID.ToString()),  // Add UserID as a custom claim
+                new Claim(ClaimTypes.Role, user.Role)
+            };
 
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
+            // If JWT is requested, generate the JWT token
+            if (isJwtRequested)
+            {
+                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:SecretKey"]));
+                var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            // Sign in the user
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
+                var token = new JwtSecurityToken(
+                    issuer: _configuration["Jwt:Issuer"],
+                    audience: _configuration["Jwt:Audience"],
+                    claims: claims,
+                    expires: DateTime.Now.AddHours(1),  // Token expiration time
+                    signingCredentials: credentials
+                );
 
-            // Set UserId in session
-            HttpContext.Session.SetInt32("UserId", user.UserID); // Store UserID in session
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jwtToken = tokenHandler.WriteToken(token);
 
-            Console.WriteLine($"User logged in: {user.UserID}, Role: {user.Role}");
+                // Return the JWT token as a response
+                return new JsonResult(new { token = jwtToken });
+            }
+            else
+            {
+                // Cookie authentication (old logic)
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
 
-            return RedirectToPage(user.Role == "Student" ? "/Users/GradesAndSchedule" : "/Users/Index");
+                // Sign in the user
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, claimsPrincipal);
+
+                // Set UserId in session
+                HttpContext.Session.SetInt32("UserId", user.UserID); // Store UserID in session
+
+                Console.WriteLine($"User logged in: {user.UserID}, Role: {user.Role}");
+
+                return RedirectToPage(user.Role == "Student" ? "/Users/GradesAndSchedule" : "/Users/Index");
+            }
         }
-
     }
 }

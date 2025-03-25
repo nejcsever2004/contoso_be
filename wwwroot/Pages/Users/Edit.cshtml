@@ -1,0 +1,75 @@
+﻿@page
+@model Contoso.Pages.Users.EditModel
+
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<h1>Edit User</h1>
+
+<h4>User Information</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="User.UserID" />
+
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="User.FullName" class="control-label"></label>
+                <input asp-for="User.FullName" class="form-control" />
+                <span asp-validation-for="User.FullName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="User.Email" class="control-label"></label>
+                <input asp-for="User.Email" class="form-control" />
+                <span asp-validation-for="User.Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group" hidden>
+                <label asp-for="User.Password" class="control-label"></label>
+                <input asp-for="User.Password" class="form-control" />
+                <span asp-validation-for="User.Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <span class="text-danger">*</span>
+                <label asp-for="User.Role" class="control-label"></label>
+                <input asp-for="User.Role" class="form-control" />
+                <span asp-validation-for="User.Role" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="FileUpload" class="control-label">Upload Profile Document</label>
+                <input type="file" asp-for="FileUpload" class="form-control" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.User.ProfileDocument))
+            {
+                <div class="form-group">
+                    <label>Current Profile Document:</label>
+                    <div>
+                        <a href="@Model.User.ProfileDocument" target="_blank">View Uploaded Document</a>
+                    </div>
+                </div>
+            }
+
+            <div class="form-group mt-3">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

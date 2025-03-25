@@ -1,0 +1,47 @@
+﻿@page
+@model Contoso.Pages.Courses.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Course Index</h1>
+
+@if (User.Identity.IsAuthenticated && User.IsInRole("Teacher"))
+{
+    <p>
+        <a asp-page="Create">Create New</a>
+    </p>
+}
+<table class="table">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.Course[0].Title)</th>
+            <th>@Html.DisplayNameFor(model => model.Course[0].Teacher)</th>
+            <th>@Html.DisplayNameFor(model => model.Course[0].Department)</th>
+            @if (User.Identity.IsAuthenticated && User.IsInRole("Teacher"))
+            {
+                <th>Actions</th> <!-- Only show this column for Teachers -->
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Course)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.Title)</td>
+                <td>@Html.DisplayFor(modelItem => item.Teacher.Email)</td>
+                <td>@Html.DisplayFor(modelItem => item.Department.DepartmentName)</td>
+
+                @if (User.Identity.IsAuthenticated && User.IsInRole("Teacher"))
+                {
+                    <td>
+                        <a asp-page="./Edit" asp-route-id="@item.CourseID">Edit</a> |
+                        <a asp-page="./Details" asp-route-id="@item.CourseID">Details</a> |
+                        <a asp-page="./Delete" asp-route-id="@item.CourseID">Delete</a>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>

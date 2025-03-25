@@ -1,0 +1,90 @@
+﻿@using System.Security.Claims
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Contoso</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ContosoUniversity.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-page="/Index">Contoso University</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        @if (User.Identity.IsAuthenticated)  // Check if the user is authenticated
+                        {
+                            @if (User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Teacher"))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="instructorDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Teacher
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="instructorDropdown">
+                                        <li><a class="dropdown-item" asp-page="/Courses/Index">Courses</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Users/Index">Users</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Grades/Index">Grades</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Departments/Index">Departments</a></li>
+                                    </ul>
+                                </li>
+                            }
+                            else if (User.Claims.Any(c => c.Type == ClaimTypes.Role && c.Value == "Student"))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="studentDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Student
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="studentDropdown">
+                                        <li><a class="dropdown-item" asp-page="/Users/GradesAndSchedule">Grades & Periods</a></li>
+                                        <li><a class="dropdown-item" asp-page="/Courses/Index">Courses</a></li>
+                                    </ul>
+                                </li>
+                            }
+                            <form method="post" asp-page="/Logout" class="d-inline">
+                                <button type="submit" class="btn btn-link nav-link">Logout</button>
+                            </form>
+                        }
+                        else
+                        {
+                            // Show login and register options when the user is not authenticated
+                            <li class="nav-item"><a class="nav-link" asp-page="/Login">Login</a></li>
+                            <li class="nav-item"><a class="nav-link" asp-page="/Register">Register</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="footer text-muted">
+        <div class="container">
+            &copy; 2021 - Nejc Sever Mihelic - <a asp-area="" asp-page="/Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

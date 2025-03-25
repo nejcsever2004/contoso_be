@@ -1,0 +1,41 @@
+﻿@page
+@model Contoso.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<h2>Register</h2>
+
+<form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label asp-for="User.FullName"></label>
+        <input asp-for="User.FullName" class="form-control" required />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="User.Email"></label>
+        <input asp-for="User.Email" type="email" class="form-control" required />
+    </div>
+
+    <div class="form-group">
+        <label asp-for="User.Role"></label>
+        <select asp-for="User.Role" class="form-control" asp-items="@(new SelectList(ViewData["Roles"] as List<string>))" required></select>
+    </div>
+
+    <div class="form-group">
+        <label>Password</label>
+        <input type="password" class="form-control" asp-for="Password" required />
+    </div>
+
+    <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" class="form-control" asp-for="ConfirmPassword" required />
+    </div>
+
+    <div class="form-group">
+        <label for="FileUpload">Profile Document</label>
+        <input type="file" id="FileUpload" name="FileUpload" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Register</button>
+</form>

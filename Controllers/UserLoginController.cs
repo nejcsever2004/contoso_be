@@ -30,18 +30,17 @@ namespace Contoso.Controllers
         // POST: api/userlogin/login
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest request)
-        {
-            // Validate request
-            if (request == null || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
-            {
-                return BadRequest("Invalid email or password.");
-            }
-
+        {           
             // Find the user by email
             var user = _context.Users.FirstOrDefault(u => u.Email == request.Email);
             if (user == null)
             {
                 return Unauthorized("User not found.");
+            }
+            // Validate request
+            if (request == null || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest("Invalid email or password.");
             }
 
             // Validate password using the PasswordHasherService
@@ -53,10 +52,17 @@ namespace Contoso.Controllers
 
             var token = GenerateJwtToken(user);
 
-            // Return token along with user information
-            return Ok(new { Token = token, Email = user.Email, FullName = user.FullName, Password = user.Password });
+            // Return token along with user information and role
+            return Ok(new
+            {
+                UserID = user.UserID,
+                Token = token,
+                Email = user.Email,
+                FullName = user.FullName,
+                Password = user.Password,
+                Role = user.Role // Include role in the response
+            });
         }
-
 
         // GET: api/userlogin/{email}
         [HttpGet("{email}")]
@@ -108,11 +114,23 @@ namespace Contoso.Controllers
 
             var token = GenerateJwtToken(user);
 
-            return Ok(new { Token = token });
+            return Ok(new
+            {
+                Token = token,
+                UserID = user.UserID,
+            });
         }
-
+        
         private string GenerateJwtToken(User user)
         {
+            // Set the claims for the JWT token
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
+                new Claim(ClaimTypes.Name, user.FullName),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString()) // Assuming Role is an enum or string
+            };
             // Secret key for signing JWT - you should store this securely, not hardcoded
             var secretKey = _configuration["Authentication:Jwt:SecretKey"];
             if (string.IsNullOrEmpty(secretKey))
@@ -122,14 +140,7 @@ namespace Contoso.Controllers
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            // Set the claims for the JWT token
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                new Claim(ClaimTypes.Name, user.FullName),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role.ToString()) // Assuming Role is an enum or string
-            };
+            
 
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],

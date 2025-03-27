@@ -112,18 +112,16 @@ app.UseSession();
 // Serve static files
 app.UseStaticFiles();
 
-// Use authentication and authorization middleware
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Use routing and HTTPS redirection
-app.UseHttpsRedirection();
+// Use routing middleware
 app.UseRouting();
 
+// Use authentication and authorization middleware
+app.UseAuthentication();   // Make sure this comes before UseAuthorization()
+app.UseAuthorization();    // This enables authorization
 // Enable CORS
 app.UseCors("AllowAll");
 
-// Map controllers and Razor Pages
+// Configure the endpoints (controllers and Razor Pages)
 app.MapControllers();
 app.MapRazorPages();
 

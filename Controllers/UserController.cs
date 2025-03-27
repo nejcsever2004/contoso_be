@@ -6,16 +6,24 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System.Configuration;
 
 [Route("api/[controller]")]
 [ApiController]
 public class UsersController : ControllerBase
 {
     private readonly SchoolContext _context;
+    private readonly IConfiguration _configuration; // For JWT configuration
 
-    public UsersController(SchoolContext context)
+
+    public UsersController(SchoolContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
     }
 
     // GET: api/users
@@ -43,6 +51,120 @@ public class UsersController : ControllerBase
 
         return Ok(user);  // Return the user with all fields
     }
+
+    [HttpGet("test")]
+    public IActionResult TestHeaders()
+    {
+        var headers = HttpContext.Request.Headers;
+        return Ok(new { Headers = headers });
+    }
+
+    // GET: api/users/me
+    [HttpGet("me")]
+    public async Task<ActionResult<User>> GetCurrentUser()
+    {
+        // Log received headers for debugging
+        Console.WriteLine("Headers received:");
+        foreach (var header in HttpContext.Request.Headers)
+        {
+            Console.WriteLine($"{header.Key}: {header.Value}");
+        }
+
+        // Extract Authentication header
+        if (!HttpContext.Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
+        {
+            return Unauthorized("No Authentication header provided.");
+        }
+
+        // Ensure the token is correctly formatted
+        var token = authorizationHeader.ToString();
+        if (!token.StartsWith("Bearer "))
+        {
+            return Unauthorized("Invalid token format.");
+        }
+
+        // Remove "Bearer " prefix
+        token = token.Substring(7).Trim();
+
+        // Validate token and extract UserID
+        var userId = ValidateToken(token);
+        if (userId == null)
+        {
+            return Unauthorized("Invalid or expired token.");
+        }
+
+        // Retrieve user from database
+        var user = await _context.Users
+            .Include(u => u.Department)
+            .FirstOrDefaultAsync(u => u.UserID == userId);
+
+        if (user == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        // Set authentication and authorization headers
+        Response.Headers.Add("Authentication", $"Bearer {token}");
+        Response.Headers.Add("Authorization", $"Bearer {token}");
+
+        return Ok(new
+        {
+            user.UserID,
+            user.FullName,
+            user.Email,
+            user.Role,
+            user.DepartmentID
+        });
+    }
+
+    private int? ValidateToken(string token)
+    {
+        try
+        {
+            var secretKey = _configuration["Authentication:Jwt:SecretKey"];
+            if (string.IsNullOrEmpty(secretKey))
+            {
+                throw new Exception("JWT Secret Key is missing from configuration.");
+            }
+
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+            var tokenValidationParams = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _configuration["Jwt:Issuer"],
+                ValidAudience = _configuration["Jwt:Audience"],
+                IssuerSigningKey = securityKey
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParams, out var validatedToken);
+
+            // Ensure token is a valid JWT
+            if (validatedToken is not JwtSecurityToken jwtToken ||
+                !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return null; // Invalid token
+            }
+
+            // Extract UserID
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier) ?? principal.FindFirst("sub");
+            if (userIdClaim == null)
+            {
+                return null; // UserID not found in token
+            }
+
+            return int.Parse(userIdClaim.Value);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Token validation error: {ex.Message}");
+            return null;
+        }
+    }
+
 
     // POST: api/users
     [HttpPost]

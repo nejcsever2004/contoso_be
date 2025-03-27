@@ -1,0 +1,8 @@
+BCrypt.Net-Next
+Microsoft.AspNet.Identity.Core
+Microsoft.AspNetCore.Authentication.JwtBearer
+Microsoft.AspNetCore.Identity.EntityFrameworkCore
+Microsoft.EntityFrameworkCore.Sqlite
+Microsoft.EntityFrameworkCore.Tools
+Microsoft.VisualStudio.Web.CodeGeneration.Design
+System.IdentityModel.Tokens.Jwt

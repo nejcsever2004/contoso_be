@@ -56,9 +56,10 @@ namespace Contoso.Pages
             // Create claims for the authenticated user
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.Email),
-                new Claim("UserId", user.UserID.ToString()),  // Add UserID as a custom claim
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),  // User ID as claim
+                new Claim(ClaimTypes.Name, user.FullName),  // User full name
+                new Claim(ClaimTypes.Email, user.Email),  // User email
+                new Claim(ClaimTypes.Role, user.Role),    // User role (Student, etc.)
             };
 
             // If JWT is requested, generate the JWT token

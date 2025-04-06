@@ -21,6 +21,7 @@ namespace Contoso.Pages.Courses
 
         public IActionResult OnGet()
         {
+            //View data funkcionira kot funkcija za prikaz elementov na strani ob metodi get ko pridemo na stran
         ViewData["DepartmentID"] = new SelectList(_context.Departments, "DepartmentID", "DepartmentName");
         ViewData["TeacherID"] = new SelectList(_context.Users, "UserID", "Email");
             return Page();

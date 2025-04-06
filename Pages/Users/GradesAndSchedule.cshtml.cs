@@ -38,7 +38,7 @@ namespace Contoso.Users
             CurrentUser = await _context.Users
                 .Include(u => u.Department)
                 .FirstOrDefaultAsync(u => u.UserID == userId.Value);
-
+             
             if (CurrentUser == null || CurrentUser.Role != "Student")
             {
                 Console.WriteLine("User not found or not a student");
@@ -70,12 +70,12 @@ namespace Contoso.Users
                 DateTime classTime;
                 if (morningCount < 2)
                 {
-                    classTime = morningStart.AddMinutes(morningCount * 120);
+                    classTime = morningStart.AddMinutes(morningCount * 60);
                     morningCount++;
                 }
                 else
                 {
-                    classTime = afternoonStart.AddMinutes(afternoonCount * 120);
+                    classTime = afternoonStart.AddMinutes(afternoonCount * 60);
                     afternoonCount++;
                 }
 
